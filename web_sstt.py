@@ -34,19 +34,20 @@ def enviar_mensaje(cs, data):
     """ Esta función envía datos (data) a través del socket cs
         Devuelve el número de bytes enviados.
     """
-    pass
+    return cs.send(data)
 
 
 def recibir_mensaje(cs,data):
     """ Esta función recibe datos a través del socket cs
         Leemos la información que nos llega. recv() devuelve un string con los datos.
     """
-    pass
+    return cs.recv(data)
 
 
 def cerrar_conexion(cs):
     """ Esta función cierra una conexión activa.
     """
+    cs.close()
     pass
 
 
