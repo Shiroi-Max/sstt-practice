@@ -34,25 +34,26 @@ def enviar_mensaje(cs, data):
     """ Esta función envía datos (data) a través del socket cs
         Devuelve el número de bytes enviados.
     """
-    pass
+    return cs.send(data)
 
 
 def recibir_mensaje(cs,data):
     """ Esta función recibe datos a través del socket cs
         Leemos la información que nos llega. recv() devuelve un string con los datos.
     """
-    pass
+    return cs.recv(data)
 
 
 def cerrar_conexion(cs):
     """ Esta función cierra una conexión activa.
     """
+    cs.close()
     pass
 
 
 def process_cookies(headers,  cs):
     """ Esta función procesa la cookie cookie_counter
-        1. Se analizan las cabeceras en headers para buscar la cabecera Cookie
+        1. Se analizan las cabeceras en headers para buscar la cabecera 
         2. Una vez encontrada una cabecera Cookie se comprueba si el valor es cookie_counter
         3. Si no se encuentra cookie_counter , se devuelve 1
         4. Si se encuentra y tiene el valor MAX_ACCESSOS se devuelve MAX_ACCESOS
