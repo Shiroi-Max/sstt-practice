@@ -2,26 +2,25 @@
 #!/usr/bin/env python3
 
 import socket
-import selectors    #https://docs.python.org/3/library/selectors.html
+import selectors  # https://docs.python.org/3/library/selectors.html
 import select
 import types        # Para definir el tipo de datos data
 import argparse     # Leer parametros de ejecución
 import os           # Obtener ruta y extension
-from datetime import datetime, timedelta # Fechas de los mensajes HTTP
+from datetime import datetime, timedelta  # Fechas de los mensajes HTTP
 import time         # Timeout conexión
 import sys          # sys.exit
 import re           # Analizador sintáctico
 import logging      # Para imprimir logs
 
 
-
-BUFSIZE = 8192 # Tamaño máximo del buffer que se puede utilizar
-TIMEOUT_CONNECTION = 20 # Timeout para la conexión persistente
+BUFSIZE = 8192  # Tamaño máximo del buffer que se puede utilizar
+TIMEOUT_CONNECTION = 20  # Timeout para la conexión persistente
 MAX_ACCESOS = 10
 
 # Extensiones admitidas (extension, name in HTTP)
-filetypes = {"gif":"image/gif", "jpg":"image/jpg", "jpeg":"image/jpeg", "png":"image/png", "htm":"text/htm", 
-             "html":"text/html", "css":"text/css", "js":"text/js"}
+filetypes = {"gif": "image/gif", "jpg": "image/jpg", "jpeg": "image/jpeg", "png": "image/png", "htm": "text/htm",
+             "html": "text/html", "css": "text/css", "js": "text/js"}
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO,
@@ -37,7 +36,7 @@ def enviar_mensaje(cs, data):
     return cs.send(data)
 
 
-def recibir_mensaje(cs,data):
+def recibir_mensaje(cs, data):
     """ Esta función recibe datos a través del socket cs
         Leemos la información que nos llega. recv() devuelve un string con los datos.
     """
@@ -48,7 +47,6 @@ def cerrar_conexion(cs):
     """ Esta función cierra una conexión activa.
     """
     cs.close()
-    pass
 
 
 def process_cookies(headers,  cs):
@@ -106,38 +104,60 @@ def main():
 
         # Argument parser para obtener la ip y puerto de los parámetros de ejecución del programa. IP por defecto 0.0.0.0
         parser = argparse.ArgumentParser()
-        parser.add_argument("-p", "--port", help="Puerto del servidor", type=int, required=True)
-        parser.add_argument("-ip", "--host", help="Dirección IP del servidor o localhost", required=True)
-        parser.add_argument("-wb", "--webroot", help="Directorio base desde donde se sirven los ficheros (p.ej. /home/user/mi_web)")
-        parser.add_argument('--verbose', '-v', action='store_true', help='Incluir mensajes de depuración en la salida')
+        parser.add_argument(
+            "-p", "--port", help="Puerto del servidor", type=int, required=True)
+        parser.add_argument(
+            "-ip", "--host", help="Dirección IP del servidor o localhost", required=True)
+        parser.add_argument(
+            "-wb", "--webroot", help="Directorio base desde donde se sirven los ficheros (p.ej. /home/user/mi_web)")
+        parser.add_argument('--verbose', '-v', action='store_true',
+                            help='Incluir mensajes de depuración en la salida')
         args = parser.parse_args()
-
 
         if args.verbose:
             logger.setLevel(logging.DEBUG)
 
-        logger.info('Enabling server in address {} and port {}.'.format(args.host, args.port))
+        logger.info('Enabling server in address {} and port {}.'.format(
+            args.host, args.port))
 
         logger.info("Serving files from {}".format(args.webroot))
 
         """ Funcionalidad a realizar
         * Crea un socket TCP (SOCK_STREAM)
+        """
+        cs = socket.socket(socket.AF_INET,socket.SOCK_STREAM,0)
+        """
         * Permite reusar la misma dirección previamente vinculada a otro proceso. Debe ir antes de sock.bind
         * Vinculamos el socket a una IP y puerto elegidos
-
-        * Escucha conexiones entrantes
-
-        * Bucle infinito para mantener el servidor activo indefinidamente
-            - Aceptamos la conexión
-
-            - Creamos un proceso hijo
-
-            - Si es el proceso hijo se cierra el socket del padre y procesar la petición con process_web_request()
-
-            - Si es el proceso padre cerrar el socket que gestiona el hijo.
         """
+        cs.bind((args.host, args.port))
+        """
+        * Escucha conexiones entrantes
+        """
+        cs.listen()
+        """
+        * Bucle infinito para mantener el servidor activo indefinidamente
+        """
+        while True:
+            """
+            - Aceptamos la conexión
+            """
+            conn, addr = cs.accept()
+            """
+            - Creamos un proceso hijo
+            """
+            pid = os.fork()
+            """
+            - Si es el proceso hijo se cierra el socket del padre y procesar la petición con process_web_request()
+            """
+            if pid == 0:
+                pass
+            """
+            - Si es el proceso padre cerrar el socket que gestiona el hijo.
+            """
     except KeyboardInterrupt:
         True
 
-if __name__== "__main__":
+
+if __name__ == "__main__":
     main()
