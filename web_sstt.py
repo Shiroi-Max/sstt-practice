@@ -101,7 +101,6 @@ def main():
     """ Función principal del servidor
     """
     try:
-
         # Argument parser para obtener la ip y puerto de los parámetros de ejecución del programa. IP por defecto 0.0.0.0
         parser = argparse.ArgumentParser()
         parser.add_argument(
@@ -125,9 +124,12 @@ def main():
         """ Funcionalidad a realizar
         * Crea un socket TCP (SOCK_STREAM)
         """
-        cs = socket.socket(socket.AF_INET,socket.SOCK_STREAM,0)
+        cs = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         """
         * Permite reusar la misma dirección previamente vinculada a otro proceso. Debe ir antes de sock.bind
+        """
+        cs.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        """
         * Vinculamos el socket a una IP y puerto elegidos
         """
         cs.bind((args.host, args.port))
@@ -149,12 +151,13 @@ def main():
             pid = os.fork()
             """
             - Si es el proceso hijo se cierra el socket del padre y procesar la petición con process_web_request()
-            """
-            if pid == 0:
-                pass
-            """
             - Si es el proceso padre cerrar el socket que gestiona el hijo.
             """
+            if pid == 0:
+                cerrar_conexion(cs)
+                process_web_request()
+            else: 
+                cerrar_conexion(conn)
     except KeyboardInterrupt:
         True
 
