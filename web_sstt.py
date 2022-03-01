@@ -28,6 +28,12 @@ logging.basicConfig(level=logging.INFO,
                     datefmt='%Y-%m-%d %H:%M:%S')
 logger = logging.getLogger()
 
+# Expresiones regulares
+pattern_cookie = r'\b(Cookie:) ?(\d{0,2})$'
+er_cookie = re.compile(pattern_cookie)
+pattern_request = r'\b(GET|POST|HEAD|PUT|DELETE) (.+) HTTP/1\.1$'
+er_request = re.compile(pattern_request)
+
 
 def enviar_mensaje(cs, data):
     """ Esta función envía datos (data) a través del socket cs
@@ -57,7 +63,14 @@ def process_cookies(headers,  cs):
         4. Si se encuentra y tiene el valor MAX_ACCESSOS se devuelve MAX_ACCESOS
         5. Si se encuentra y tiene un valor 1 <= x < MAX_ACCESOS se incrementa en 1 y se devuelve el valor
     """
-    pass
+    result = er_cookie.match(headers)
+    if result:
+        cookie_counter = result.group(2)
+        if not cookie_counter:
+            return 1
+        elif cookie_counter == MAX_ACCESOS:
+            return MAX_ACCESOS
+        return cookie_counter+1
 
 
 def process_web_request(cs, webroot):
@@ -70,7 +83,8 @@ def process_web_request(cs, webroot):
     rlist, xlist = [cs]
     wlist = []
     while True:
-        rsublist, wsublist, xsublist = select.select(rlist, wlist, xlist, TIMEOUT_CONNECTION)
+        rsublist, wsublist, xsublist = select.select(
+            rlist, wlist, xlist, TIMEOUT_CONNECTION)
         """
         * Se comprueba si hay que cerrar la conexión por exceder TIMEOUT_CONNECTION segundos
         sin recibir ningún mensaje o hay datos. Se utiliza select.select
@@ -103,8 +117,14 @@ def process_web_request(cs, webroot):
         if rsublist == [] and wsublist == [] and xsublist == []:
             cerrar_conexion(cs)
         elif rsublist == [cs]:
-            recibir_mensaje(cs)
-            
+            data = recibir_mensaje(cs)
+            list = data.split("\r\n")
+            result = er_request.fullmatch(list[0])
+            if result:
+                if result.group(1) != "GET":
+                    pass  # Error 405 "Method Not Allowed" (Placeholder)
+            url = result.group(2)
+
         else:
             cerrar_conexion(cs)
 
@@ -168,7 +188,7 @@ def main():
             if pid == 0:
                 cerrar_conexion(cs)
                 process_web_request(conn, args.webroot)
-            else: 
+            else:
                 cerrar_conexion(conn)
     except KeyboardInterrupt:
         True
