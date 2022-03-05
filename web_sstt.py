@@ -31,7 +31,7 @@ logger = logging.getLogger()
 # Expresiones regulares
 pattern_cookie = r'(Cookie:) ?(\d{0,2})'
 er_cookie = re.compile(pattern_cookie)
-pattern_request = r'\b(GET|POST|HEAD|PUT|DELETE) (.+) HTTP/1\.1$'
+pattern_request = r'\b(GET|POST|HEAD|PUT|DELETE) (/.*) HTTP/1\.1$'
 er_request = re.compile(pattern_request)
 
 
@@ -55,7 +55,7 @@ def cerrar_conexion(cs):
     cs.close()
 
 
-def process_cookies(headers,  cs):
+def process_cookies(headers):
     """ Esta función procesa la cookie cookie_counter
         1. Se analizan las cabeceras en headers para buscar la cabecera Cookie
         2. Una vez encontrada una cabecera Cookie se comprueba si el valor es cookie_counter
@@ -124,7 +124,18 @@ def process_web_request(cs, webroot):
                 if result.group(1) != "GET":
                     pass  # Error 405 "Method Not Allowed" (Placeholder)
             url = result.group(2)
-
+            url, c, param = url.partition('?')
+            if url == '/':
+                url = "/index.html"
+            url = webroot + url
+            if not os.path.isfile(url):
+                pass  # Error 404 "Not Found" (Placeholder)
+            cookie_counter = process_cookies(list)
+            if cookie_counter == MAX_ACCESOS:
+                pass  # Error 403 "Forbidden" (Placeholder)
+            size = os.stat(url).st_size
+            extention = os.path.basename(url)
+            
 
 def main():
     """ Función principal del servidor
