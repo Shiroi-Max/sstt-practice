@@ -55,6 +55,48 @@ def cerrar_conexion(cs):
     cs.close()
 
 
+def error403(cs, webroot):
+    url = webroot + "/error403.html"
+    size = os.stat(url)
+    extention = "html"
+    f = open(url, BUFSIZE)
+    text = f.read(size)
+    f.close()
+    resp = "HTTP/1.1 403 Forbidden\r\nDate: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + \
+        "\r\nServer: \r\nContent-Length: " + size + \
+        "\r\nConnection: \r\nContent-Type: " + \
+        filetypes[extention] + "\r\n\r\n" + text
+    enviar_mensaje(cs, resp)
+
+
+def error404(cs, webroot):
+    url = webroot + "/error404.html"
+    size = os.stat(url)
+    extention = "html"
+    f = open(url, BUFSIZE)
+    text = f.read(size)
+    f.close()
+    resp = "HTTP/1.1 404 Not Found\r\nDate: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + \
+        "\r\nServer: \r\nContent-Length: " + size + \
+        "\r\nConnection: \r\nContent-Type: " + \
+        filetypes[extention] + "\r\n\r\n" + text
+    enviar_mensaje(cs, resp)
+
+
+def error405(cs, webroot):
+    url = webroot + "/error405.html"
+    size = os.stat(url)
+    extention = "html"
+    f = open(url, BUFSIZE)
+    text = f.read(size)
+    f.close()
+    resp = "HTTP/1.1 405 Method Not Allowed\r\nDate: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + \
+        "\r\nServer: \r\nContent-Length: " + size + \
+        "\r\nConnection: \r\nContent-Type: " + \
+        filetypes[extention] + "\r\n\r\n" + text
+    enviar_mensaje(cs, resp)
+
+
 def process_cookies(headers):
     """ Esta función procesa la cookie cookie_counter
         1. Se analizan las cabeceras en headers para buscar la cabecera Cookie
@@ -122,20 +164,29 @@ def process_web_request(cs, webroot):
             result = er_request.fullmatch(list[0])
             if result:
                 if result.group(1) != "GET":
-                    pass  # Error 405 "Method Not Allowed" (Placeholder)
+                    error405(cs, webroot)
             url = result.group(2)
             url, c, param = url.partition('?')
             if url == '/':
                 url = "/index.html"
             url = webroot + url
             if not os.path.isfile(url):
-                pass  # Error 404 "Not Found" (Placeholder)
+                error404(cs, webroot)
             cookie_counter = process_cookies(list)
             if cookie_counter == MAX_ACCESOS:
-                pass  # Error 403 "Forbidden" (Placeholder)
+                error403(cs, webroot)
             size = os.stat(url).st_size
             extention = os.path.basename(url)
-            
+            resp = "HTTP/1.1 200 OK\r\nDate: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + \
+                "\r\nServer: \r\nContent-Length: " + size + "\r\nConnection: \r\nContent-Type: " + filetypes[extention] + "\r\nSet-Cookie: " + \
+                cookie_counter + "\r\n\r\n"
+            f = open(url, "rb", BUFSIZE)
+            text = f.read(size)
+            f.close()
+            resp = resp + text
+            enviar_mensaje(cs, resp)
+            break
+
 
 def main():
     """ Función principal del servidor
