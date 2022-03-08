@@ -56,7 +56,7 @@ def cerrar_conexion(cs):
 
 
 def error403(cs, webroot):
-    url = webroot + "/error403.html"
+    url = webroot + "/errors/error403.html"
     size = os.stat(url)
     extention = "html"
     f = open(url, BUFSIZE)
@@ -70,7 +70,7 @@ def error403(cs, webroot):
 
 
 def error404(cs, webroot):
-    url = webroot + "/error404.html"
+    url = webroot + "/errors/error404.html"
     size = os.stat(url)
     extention = "html"
     f = open(url, BUFSIZE)
@@ -84,7 +84,7 @@ def error404(cs, webroot):
 
 
 def error405(cs, webroot):
-    url = webroot + "/error405.html"
+    url = webroot + "/errors/error405.html"
     size = os.stat(url)
     extention = "html"
     f = open(url, BUFSIZE)
