@@ -1,6 +1,7 @@
 # coding=utf-8
 #!/usr/bin/env python3
 
+from asyncio.base_subprocess import WriteSubprocessPipeProto
 import socket
 import selectors  # https://docs.python.org/3/library/selectors.html
 import select
@@ -21,6 +22,8 @@ MAX_ACCESOS = 10
 # Extensiones admitidas (extension, name in HTTP)
 filetypes = {"gif": "image/gif", "jpg": "image/jpg", "jpeg": "image/jpeg", "png": "image/png", "htm": "text/htm",
              "html": "text/html", "css": "text/css", "js": "text/js"}
+
+errortypes = {"403": "403 Forbidden", "404": "404 Not Found", "405": "405 Method Not Allowed"}
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO,
@@ -46,7 +49,7 @@ def recibir_mensaje(cs):
     """ Esta función recibe datos a través del socket cs
         Leemos la información que nos llega. recv() devuelve un string con los datos.
     """
-    return cs.recv(BUFSIZE)
+    return cs.recv(BUFSIZE).decode()
 
 
 def cerrar_conexion(cs):
@@ -55,46 +58,18 @@ def cerrar_conexion(cs):
     cs.close()
 
 
-def error403(cs, webroot):
-    url = webroot + "/errors/error403.html"
+def enviar_error(cs, webroot, error):
+    url = webroot + "/errors/error" + error + ".html"
     size = os.stat(url)
     extention = "html"
     f = open(url, BUFSIZE)
     text = f.read(size)
     f.close()
-    resp = "HTTP/1.1 403 Forbidden\r\nDate: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + \
+    resp = "HTTP/1.1" + errortypes[error] + "\r\nDate: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + \
         "\r\nServer: \r\nContent-Length: " + size + \
         "\r\nConnection: \r\nContent-Type: " + \
         filetypes[extention] + "\r\n\r\n" + text
-    enviar_mensaje(cs, resp)
-
-
-def error404(cs, webroot):
-    url = webroot + "/errors/error404.html"
-    size = os.stat(url)
-    extention = "html"
-    f = open(url, BUFSIZE)
-    text = f.read(size)
-    f.close()
-    resp = "HTTP/1.1 404 Not Found\r\nDate: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + \
-        "\r\nServer: \r\nContent-Length: " + size + \
-        "\r\nConnection: \r\nContent-Type: " + \
-        filetypes[extention] + "\r\n\r\n" + text
-    enviar_mensaje(cs, resp)
-
-
-def error405(cs, webroot):
-    url = webroot + "/errors/error405.html"
-    size = os.stat(url)
-    extention = "html"
-    f = open(url, BUFSIZE)
-    text = f.read(size)
-    f.close()
-    resp = "HTTP/1.1 405 Method Not Allowed\r\nDate: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + \
-        "\r\nServer: \r\nContent-Length: " + size + \
-        "\r\nConnection: \r\nContent-Type: " + \
-        filetypes[extention] + "\r\n\r\n" + text
-    enviar_mensaje(cs, resp)
+    enviar_mensaje(cs, resp.encode())
 
 
 def process_cookies(headers):
@@ -122,7 +97,8 @@ def process_web_request(cs, webroot):
 
     * Bucle para esperar hasta que lleguen datos en la red a través del socket cs con select()
     """
-    rlist, xlist = [cs]
+    rlist = [cs]
+    xlist = [cs]
     wlist = []
     while True:
         rsublist, wsublist, xsublist = select.select(
@@ -156,36 +132,34 @@ def process_web_request(cs, webroot):
         * Si es por timeout, se cierra el socket tras el período de persistencia.
             * NOTA: Si hay algún error, enviar una respuesta de error con una pequeña página HTML que informe del error.
         """
-        if rsublist == [] and wsublist == [] and xsublist == []:
-            cerrar_conexion(cs)
-        elif rsublist == [cs]:
+        if rsublist == [cs]:
             data = recibir_mensaje(cs)
             list = data.split("\r\n")
             result = er_request.fullmatch(list[0])
             if result:
                 if result.group(1) != "GET":
-                    error405(cs, webroot)
+                    enviar_error(cs, webroot, "405")
             url = result.group(2)
             url, c, param = url.partition('?')
             if url == '/':
                 url = "/index.html"
             url = webroot + url
             if not os.path.isfile(url):
-                error404(cs, webroot)
-            cookie_counter = process_cookies(list)
+                enviar_error(cs, webroot, "404")
+            cookie_counter = process_cookies(data)
             if cookie_counter == MAX_ACCESOS:
-                error403(cs, webroot)
+                enviar_error(cs, webroot, "403")
             size = os.stat(url).st_size
-            extention = os.path.basename(url)
-            resp = "HTTP/1.1 200 OK\r\nDate: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + \
-                "\r\nServer: \r\nContent-Length: " + size + "\r\nConnection: \r\nContent-Type: " + filetypes[extention] + "\r\nSet-Cookie: " + \
-                cookie_counter + "\r\n\r\n"
+            extention = os.path.basename(url).split('.')[1]
+            resp = "HTTP/1.1 200 OK\r\nDate: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + "\r\nServer: \r\nContent-Length: " + str(size) + "\r\nKeep-Alive: timeout= " + \
+                str(TIMEOUT_CONNECTION+1) + "\r\nConnection: Keep-Alive\r\nContent-Type: " + \
+                filetypes[extention] + "; charset=ISO-8859-1\r\nSet-Cookie: " + \
+                str(cookie_counter) + "\r\n\r\n"
             f = open(url, "rb", BUFSIZE)
             text = f.read(size)
             f.close()
-            resp = resp + text
+            resp = resp.encode() + text
             enviar_mensaje(cs, resp)
-            break
 
 
 def main():
@@ -247,6 +221,7 @@ def main():
             if pid == 0:
                 cerrar_conexion(cs)
                 process_web_request(conn, args.webroot)
+                break
             else:
                 cerrar_conexion(conn)
     except KeyboardInterrupt:
