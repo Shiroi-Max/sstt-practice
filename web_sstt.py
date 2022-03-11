@@ -23,7 +23,8 @@ MAX_ACCESOS = 10
 filetypes = {"gif": "image/gif", "jpg": "image/jpg", "jpeg": "image/jpeg", "png": "image/png", "htm": "text/htm",
              "html": "text/html", "css": "text/css", "js": "text/js"}
 
-errortypes = {"403": "403 Forbidden", "404": "404 Not Found", "405": "405 Method Not Allowed"}
+errortypes = {"403": "403 Forbidden",
+              "404": "404 Not Found", "405": "405 Method Not Allowed"}
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO,
@@ -32,10 +33,12 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger()
 
 # Expresiones regulares
-pattern_cookie = r'(Cookie:) ?(\d{0,2})'
+pattern_cookie = r'\b(Cookie: .*)(\d{1,2})$'
 er_cookie = re.compile(pattern_cookie)
 pattern_request = r'\b(GET|POST|HEAD|PUT|DELETE) (/.*) HTTP/1\.1$'
 er_request = re.compile(pattern_request)
+pattern_host = r'\bHost: .+:\d{1,}'
+er_host = re.compile(pattern_host)
 
 
 def enviar_mensaje(cs, data):
@@ -60,16 +63,16 @@ def cerrar_conexion(cs):
 
 def enviar_error(cs, webroot, error):
     url = webroot + "/errors/error" + error + ".html"
-    size = os.stat(url)
+    size = os.stat(url).st_size
     extention = "html"
-    f = open(url, BUFSIZE)
+    f = open(url, "rb", BUFSIZE)
     text = f.read(size)
     f.close()
     resp = "HTTP/1.1" + errortypes[error] + "\r\nDate: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + \
-        "\r\nServer: \r\nContent-Length: " + size + \
-        "\r\nConnection: \r\nContent-Type: " + \
-        filetypes[extention] + "\r\n\r\n" + text
-    enviar_mensaje(cs, resp.encode())
+        "\r\nServer: web.shiroiwebmail27.org\r\nkeep-Alive\r\nKeep-Alive: timeout= " + \
+        str(TIMEOUT_CONNECTION+1) + "\r\nContent-Type: " + \
+        filetypes[extention] + "; charset=utf-8\r\n\r\n"
+    enviar_mensaje(cs, resp.encode() + text)
 
 
 def process_cookies(headers):
@@ -80,14 +83,12 @@ def process_cookies(headers):
         4. Si se encuentra y tiene el valor MAX_ACCESOS se devuelve MAX_ACCESOS
         5. Si se encuentra y tiene un valor 1 <= x < MAX_ACCESOS se incrementa en 1 y se devuelve el valor
     """
-    result = er_cookie.match(headers)
-    if result:
-        cookie_counter = result.group(2)
-        if not cookie_counter:
-            return 1
-        elif cookie_counter == MAX_ACCESOS:
-            return MAX_ACCESOS
-        return cookie_counter+1
+    for header in headers:
+        result = er_cookie.fullmatch(header)
+        if result:
+            cookie_counter = int(result.group(2))
+            return cookie_counter+1
+    return 1
 
 
 def process_web_request(cs, webroot):
@@ -101,6 +102,9 @@ def process_web_request(cs, webroot):
     xlist = [cs]
     wlist = []
     while True:
+        rsublist = []
+        wsublist = []
+        xsublist = []
         rsublist, wsublist, xsublist = select.select(
             rlist, wlist, xlist, TIMEOUT_CONNECTION)
         """
@@ -134,32 +138,40 @@ def process_web_request(cs, webroot):
         """
         if rsublist == [cs]:
             data = recibir_mensaje(cs)
-            list = data.split("\r\n")
-            result = er_request.fullmatch(list[0])
-            if result:
-                if result.group(1) != "GET":
-                    enviar_error(cs, webroot, "405")
-            url = result.group(2)
-            url, c, param = url.partition('?')
-            if url == '/':
-                url = "/index.html"
-            url = webroot + url
-            if not os.path.isfile(url):
-                enviar_error(cs, webroot, "404")
-            cookie_counter = process_cookies(data)
-            if cookie_counter == MAX_ACCESOS:
-                enviar_error(cs, webroot, "403")
-            size = os.stat(url).st_size
-            extention = os.path.basename(url).split('.')[1]
-            resp = "HTTP/1.1 200 OK\r\nDate: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + "\r\nServer: \r\nContent-Length: " + str(size) + "\r\nKeep-Alive: timeout= " + \
-                str(TIMEOUT_CONNECTION+1) + "\r\nConnection: Keep-Alive\r\nContent-Type: " + \
-                filetypes[extention] + "; charset=ISO-8859-1\r\nSet-Cookie: " + \
-                str(cookie_counter) + "\r\n\r\n"
-            f = open(url, "rb", BUFSIZE)
-            text = f.read(size)
-            f.close()
-            resp = resp.encode() + text
-            enviar_mensaje(cs, resp)
+            headers = data.split("\r\n")
+            result = er_request.fullmatch(headers[0])
+            host = False
+            for header in headers:
+                result2 = er_host.fullmatch(header)
+                if result2:
+                    host = True
+            if result and host:
+                if not result.group(1) == "GET":
+                    logger.info("Error 405 Method Not Allowed")
+                    return enviar_error(cs, webroot, "405")
+                url = result.group(2)
+                url, c, param = url.partition('?')
+                if url == '/':
+                    url = "/index.html"
+                url = webroot + url
+                if not os.path.isfile(url):
+                    logger.info("Error 404 Not Found")
+                    return enviar_error(cs, webroot, "404")
+                cookie_counter = process_cookies(headers)
+                if cookie_counter == MAX_ACCESOS:
+                    logger.info("Error 403 Forbidden")
+                    return enviar_error(cs, webroot, "403")
+                size = os.stat(url).st_size
+                extention = os.path.basename(url).split('.')[1]
+                resp = "HTTP/1.1 200 OK\r\nDate: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + "\r\nServer: web.shiroiwebmail27.org\r\nContent-Length: " + str(size) + "\r\nConnection: keep-Alive\r\nKeep-Alive: timeout= " + \
+                    str(TIMEOUT_CONNECTION+1) + "\r\nContent-Type: " + \
+                    filetypes[extention] + "; charset=utf-8\r\nSet-Cookie: cookie_counter=" + \
+                    str(cookie_counter) + "; Max-Age=" + str(120) + "\r\n\r\n"
+                f = open(url, "rb", BUFSIZE)
+                text = f.read(size)
+                f.close()
+                resp = resp.encode() + text
+                enviar_mensaje(cs, resp)
 
 
 def main():
