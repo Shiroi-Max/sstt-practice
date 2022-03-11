@@ -68,10 +68,14 @@ def enviar_error(cs, webroot, error):
     f = open(url, "rb", BUFSIZE)
     text = f.read(size)
     f.close()
-    resp = "HTTP/1.1" + errortypes[error] + "\r\nDate: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + \
-        "\r\nServer: web.shiroiwebmail27.org\r\nkeep-Alive\r\nKeep-Alive: timeout= " + \
-        str(TIMEOUT_CONNECTION+1) + "\r\nContent-Type: " + \
-        filetypes[extention] + "; charset=utf-8\r\n\r\n"
+    resp = "HTTP/1.1" + errortypes[error] + "\r\n" + \
+        "Date: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + "\r\n" + \
+        "Server: web.shiroiwebmail27.org\r\n" + \
+        "Content-Length: " + str(size) + "\r\n" + \
+        "Connection: keep-Alive\r\n" + \
+        "Keep-Alive: timeout= " + str(TIMEOUT_CONNECTION+1) + "\r\n" + \
+        "Content-Type: " + filetypes[extention] + "; charset=utf-8\r\n" + \
+        "\r\n"
     enviar_mensaje(cs, resp.encode() + text)
 
 
@@ -163,10 +167,15 @@ def process_web_request(cs, webroot):
                     return enviar_error(cs, webroot, "403")
                 size = os.stat(url).st_size
                 extention = os.path.basename(url).split('.')[1]
-                resp = "HTTP/1.1 200 OK\r\nDate: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + "\r\nServer: web.shiroiwebmail27.org\r\nContent-Length: " + str(size) + "\r\nConnection: keep-Alive\r\nKeep-Alive: timeout= " + \
-                    str(TIMEOUT_CONNECTION+1) + "\r\nContent-Type: " + \
-                    filetypes[extention] + "; charset=utf-8\r\nSet-Cookie: cookie_counter=" + \
-                    str(cookie_counter) + "; Max-Age=" + str(120) + "\r\n\r\n"
+                resp = "HTTP/1.1 200 OK\r\n" + \
+                    "Date: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + "\r\n" + \
+                    "Server: web.shiroiwebmail27.org\r\n" + \
+                    "Content-Length: " + str(size) + "\r\n" + \
+                    "Connection: keep-Alive\r\n" + \
+                    "Keep-Alive: timeout= " + str(TIMEOUT_CONNECTION+1) + "\r\n" + \
+                    "Content-Type: " + filetypes[extention] + "; charset=utf-8\r\n" + \
+                    "Set-Cookie: cookie_counter=" + str(cookie_counter) + "; Max-Age=" + str(120) + "\r\n" + \
+                    "\r\n"
                 f = open(url, "rb", BUFSIZE)
                 text = f.read(size)
                 f.close()
