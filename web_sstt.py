@@ -23,8 +23,8 @@ MAX_ACCESOS = 10
 filetypes = {"gif": "image/gif", "jpg": "image/jpg", "jpeg": "image/jpeg", "png": "image/png", "htm": "text/htm",
              "html": "text/html", "css": "text/css", "js": "text/js"}
 
-errortypes = {"403": "403 Forbidden",
-              "404": "404 Not Found", "405": "405 Method Not Allowed"}
+errortypes = {"400": "Bad Request", "403": "403 Forbidden",
+              "404": "404 Not Found", "405": "405 Method Not Allowed", "505": "505 HTTP Version Not Supported"}
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO,
@@ -87,39 +87,46 @@ def process_web_request(cs, webroot):
             headers = data.split("\r\n")                            
             result = er_request.fullmatch(headers[0])                   # Analiza la línea de solicitud
             if result:                                                  # Si la línea de solicitud tiene el formato correcto:
-                if result.group(1) == "GET":                            # Si el método es GET:
-                    url = result.group(2)                                   # Analiza la ruta
-                    url, c, param = url.partition('?')
-                    if url == '/':                                          # Si la ruta es la raíz:
-                        url = "/index.html"                                     # Selecciona la ruta del index.html
-                    url = webroot + url
-                    if os.path.isfile(url):                                 # Si la ruta existe:
-                        cookie_counter = process_cookies(headers)               # Procesamos las cookies del cliente
-                        if cookie_counter < MAX_ACCESOS:                        # Si la cookie es menor que MAX_ACCESOS:
-                            size = os.stat(url).st_size                             # Obtiene el tamaño del objeto solicitado
-                            extention = os.path.basename(url).split('.')[1]         # Obtiene la extensión del " "
-                            resp = "HTTP/1.1 200 OK\r\n" + \
-                                "Date: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + "\r\n" + \
-                                "Server: web.shiroiwebmail27.org\r\n" + \
-                                "Content-Length: " + str(size) + "\r\n" + \
-                                "Connection: keep-alive\r\n" + \
-                                "Keep-Alive: timeout=" + str(TIMEOUT_CONNECTION+1) + "\r\n" + \
-                                "Content-Type: " + filetypes[extention] + "; charset=utf-8\r\n" + \
-                                "Set-Cookie: cookie_counter=" + str(cookie_counter) + "; Max-Age=" + str(120) + "\r\n" + \
-                                "\r\n"
-                            f = open(url, "rb", BUFSIZE)                            # Abre en modo binario el " "
-                            text = f.read(size)                                     # Lee el contenido
-                            f.close()                                               # Cierra el objeto solicitado
-                            cs.send(resp.encode() + text)                           # Envía la respuesta formada por las cabeceras y el objeto solicitado
-                        else:                                                   # En caso de que la cookie sea igual a MAX_ACCESOS:
-                            logger.info("Error 403 Forbidden")
-                            enviar_error(cs, webroot, "403")                        # Envía una respuesta con un objeto html que muestra el error 403
-                    else:                                                   # En caso de que la ruta no exista:
-                        logger.info("Error 404 Not Found")
-                        enviar_error(cs, webroot, "404")                        # Envía una respuesta con un objeto html que muestra el error 404
-                else:                                                   # En caso de no ser método GET:
-                    logger.info("Error 405 Method Not Allowed")
-                    enviar_error(cs, webroot, "405")                        # Envía una respuesta con un objeto html que muestra el error 405
+                if result.group(3) == "1.1":                                # Si la versión es 1.1:
+                    if result.group(1) == "GET":                                # Si el método es GET:
+                        url = result.group(2)                                       # Analiza la ruta
+                        url, c, param = url.partition('?')
+                        if url == '/':                                              # Si la ruta es la raíz:
+                            url = "/index.html"                                         # Selecciona la ruta del index.html
+                        url = webroot + url
+                        if os.path.isfile(url):                                     # Si la ruta existe:
+                            cookie_counter = process_cookies(headers)                   # Procesamos las cookies del cliente
+                            if cookie_counter < MAX_ACCESOS:                            # Si la cookie es menor que MAX_ACCESOS:
+                                size = os.stat(url).st_size                                 # Obtiene el tamaño del objeto solicitado
+                                extention = os.path.basename(url).split('.')[1]             # Obtiene la extensión del " "
+                                resp = "HTTP/1.1 200 OK\r\n" + \
+                                    "Date: " + datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT') + "\r\n" + \
+                                    "Server: web.shiroiwebmail27.org\r\n" + \
+                                    "Content-Length: " + str(size) + "\r\n" + \
+                                    "Connection: keep-alive\r\n" + \
+                                    "Keep-Alive: timeout=" + str(TIMEOUT_CONNECTION+1) + "\r\n" + \
+                                    "Content-Type: " + filetypes[extention] + "; charset=utf-8\r\n" + \
+                                    "Set-Cookie: cookie_counter=" + str(cookie_counter) + "; Max-Age=" + str(120) + "\r\n" + \
+                                    "\r\n"
+                                f = open(url, "rb", BUFSIZE)                                # Abre en modo binario el " "
+                                text = f.read(size)                                         # Lee el contenido
+                                f.close()                                                   # Cierra el objeto solicitado
+                                cs.send(resp.encode() + text)                               # Envía la respuesta formada por las cabeceras y el objeto solicitado
+                            else:                                                       # En caso de que la cookie sea igual a MAX_ACCESOS:
+                                logger.info("Error 403 Forbidden")
+                                enviar_error(cs, webroot, "403")                            # Envía una respuesta con un objeto html que muestra el error 403
+                        else:                                                       # En caso de que la ruta no exista:
+                            logger.info("Error 404 Not Found")
+                            enviar_error(cs, webroot, "404")                            # Envía una respuesta con un objeto html que muestra el error 404
+                    else:                                                       # En caso de no ser método GET:
+                        logger.info("Error 405 Method Not Allowed")
+                        enviar_error(cs, webroot, "405")                            # Envía una respuesta con un objeto html que muestra el error 405
+                else:                                                       # En caso de que la versión no sea 1.1:
+                    logger.info("Error 505 Version Not Supported")
+                    enviar_error(cs, webroot, "505")                            # Envía una respuesta con un objeto html que muestra el error 505
+            else:                                                       # En caso de que la línea de solicitud tiene el formato incorrecto:
+                logger.info("Error 400 Bad Request")
+                enviar_error(cs, webroot, "400")                            # Envía una respuesta con un objeto html que muestra el error 400
         elif wsublist == [] and xsublist == []:                      # En caso de timeout:
             cs.close()                                                   # Cierra el socket
             break                                                        # Para el bucle
@@ -154,6 +161,7 @@ def main():
         cs.listen()                                                  # Escucha conexiones entrantes
         while True:                                                  # Bucle para mantener el servidor activo indefinidamente
             conn, addr = cs.accept()                                      # Acepta la conexión entrante del cliente
+            logger.info("Client {} connected".format(addr))
             pid = os.fork()                                               # Crea un proceso hijo
             if pid == 0:                                                  # El proceso hijo:
                 cs.close()                                                    # Cierra el socket del proceso padre
