@@ -3,20 +3,20 @@
 
 from asyncio.base_subprocess import WriteSubprocessPipeProto
 import socket
-import selectors  # https://docs.python.org/3/library/selectors.html
+import selectors                          # https://docs.python.org/3/library/selectors.html
 import select
-import types        # Para definir el tipo de datos data
-import argparse     # Leer parametros de ejecución
-import os           # Obtener ruta y extension
+import types                              # Para definir el tipo de datos data
+import argparse                           # Leer parametros de ejecución
+import os                                 # Obtener ruta y extension
 from datetime import datetime, timedelta  # Fechas de los mensajes HTTP
-import time         # Timeout conexión
-import sys          # sys.exit
-import re           # Analizador sintáctico
-import logging      # Para imprimir logs
+import time                               # Timeout conexión
+import sys                                # sys.exit
+import re                                 # Analizador sintáctico
+import logging                            # Para imprimir logs
 
 
-BUFSIZE = 8192  # Tamaño máximo del buffer que se puede utilizar
-TIMEOUT_CONNECTION = 20  # Timeout para la conexión persistente
+BUFSIZE = 8192                            # Tamaño máximo del buffer que se puede utilizar
+TIMEOUT_CONNECTION = 20                   # Timeout para la conexión persistente
 MAX_ACCESOS = 10
 
 # Extensiones admitidas (extension, name in HTTP)
