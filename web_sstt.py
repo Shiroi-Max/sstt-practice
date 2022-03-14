@@ -39,8 +39,8 @@ pattern_request = r'\b(GET|POST|HEAD|PUT|DELETE) (/.*) HTTP/(\d\.\d)$'
 er_request = re.compile(pattern_request)
 
 
-# La función enviar_error devuelve un mensaje de respuesta con un fichero html que muestra el error especificado
-def enviar_error(cs, webroot, error):
+# La función send_error devuelve un mensaje de respuesta con un fichero html que muestra el error especificado
+def send_error(cs, webroot, error):
     url = webroot + "/errors/error" + error + ".html"           # Forma la ruta del objeto error solicitado
     size = os.stat(url).st_size                                 # Obtiene el tamaño del " " "
     extention = "html"                                          # Especifica la extensión del " " "
@@ -114,19 +114,19 @@ def process_web_request(cs, webroot):
                                 cs.send(resp.encode() + text)                               # Envía la respuesta formada por las cabeceras y el objeto solicitado
                             else:                                                       # En caso de que la cookie sea igual a MAX_ACCESOS:
                                 logger.info("Error 403 Forbidden")
-                                enviar_error(cs, webroot, "403")                            # Envía una respuesta con un objeto html que muestra el error 403
+                                send_error(cs, webroot, "403")                            # Envía una respuesta con un objeto html que muestra el error 403
                         else:                                                       # En caso de que la ruta no exista:
                             logger.info("Error 404 Not Found")
-                            enviar_error(cs, webroot, "404")                            # Envía una respuesta con un objeto html que muestra el error 404
+                            send_error(cs, webroot, "404")                            # Envía una respuesta con un objeto html que muestra el error 404
                     else:                                                       # En caso de no ser método GET:
                         logger.info("Error 405 Method Not Allowed")
-                        enviar_error(cs, webroot, "405")                            # Envía una respuesta con un objeto html que muestra el error 405
+                        send_error(cs, webroot, "405")                            # Envía una respuesta con un objeto html que muestra el error 405
                 else:                                                       # En caso de que la versión no sea 1.1:
                     logger.info("Error 505 Version Not Supported")
-                    enviar_error(cs, webroot, "505")                            # Envía una respuesta con un objeto html que muestra el error 505
+                    send_error(cs, webroot, "505")                            # Envía una respuesta con un objeto html que muestra el error 505
             else:                                                       # En caso de que la línea de solicitud tiene el formato incorrecto:
                 logger.info("Error 400 Bad Request")
-                enviar_error(cs, webroot, "400")                            # Envía una respuesta con un objeto html que muestra el error 400
+                send_error(cs, webroot, "400")                            # Envía una respuesta con un objeto html que muestra el error 400
         elif wsublist == [] and xsublist == []:                      # En caso de timeout:
             cs.close()                                                   # Cierra el socket
             break                                                        # Para el bucle
