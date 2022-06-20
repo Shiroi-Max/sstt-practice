@@ -23,7 +23,7 @@ MAX_ACCESOS = 10
 filetypes = {"gif": "image/gif", "jpg": "image/jpg", "jpeg": "image/jpeg", "png": "image/png", "htm": "text/htm",
              "html": "text/html", "css": "text/css", "js": "text/js"}
 
-errortypes = {"400": "Bad Request", "403": "403 Forbidden",
+errortypes = {"400": "400 Bad Request", "403": "403 Forbidden",
               "404": "404 Not Found", "405": "405 Method Not Allowed", "505": "505 HTTP Version Not Supported"}
 
 # Configuración de logging
