@@ -81,7 +81,7 @@ def process_web_request(cs, webroot):
             rlist, wlist, xlist, TIMEOUT_CONNECTION)
         if rsublist == [cs]:                                        # Si hay caracteres disponibles para leer:
             try:                                                        
-                data = cs.recv(BUFSIZE).decode()                        # Recibe la solicitud y la descodifica
+                data = cs.recv(BUFSIZE).decode()                        # Recibe la solicitud y la decodifica
             except UnicodeDecodeError as e:
                 break                                                   # En caso de que la solicitud llegue vacía, corta la conexión
             headers = data.split("\r\n")                            
