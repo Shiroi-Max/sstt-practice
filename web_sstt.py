@@ -134,7 +134,7 @@ def process_web_request(cs, webroot):
             try:
                 cs.send(resp.encode() + text)                           # Envía la respuesta formada por las cabeceras y el objeto solicitado
             except socket.error as e:
-                break                                                   # En caso de que haya algún relacionado con el socket, corta la conexión
+                break                                                   # En caso de que haya algún error relacionado con el socket, corta la conexión
                 
         elif wsublist == [] and xsublist == []:                      # En caso de timeout:
             cs.close()                                                   # Cierra el socket
